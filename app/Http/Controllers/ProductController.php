@@ -4,87 +4,102 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Exception;
-class ProductController extends Controller
-{
+use Illuminate\Support\Facades\Validator;
 
-    public function index()
-    {
-        //
-        return response()->json(Product::all());
+class ProductController extends Controller {
 
+    function fetch() {
+        return view('fetch');
     }
 
-
-    /*public function create()
-    {
-        //
-    }
-    */
-
-
-    public function store(Request $request)
-    {
-        //
-        $validatedData = $request->validate([
-            'name' => 'required',
-            'price' => 'required'
+    public function index() {
+        return response()->json([
+            'products' => Product::orderBy('id')->get()
         ]);
-        $objeto = new Product($request->all());
-        try {
-            $objeto->save();
-            return response()->json([
-                'message' => 'Producto creado',
-                'error' => false
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Error al crear producto',
-                'error' => true
-            ], status: 500);
-        }
-
     }
 
-
-    public function show($id)
-    {
-       try {
-            $product = Product::findOrFail($id);
-            return response()->json($product);
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Producto no encontrado',
-                'error' => true
-            ], status: 404);
-        }
-    }
-
-
-    /*public function edit(Product $product)
-    {
+    /*public function create() {
         //
-    }
-    */
-    public function update(Request $request, Product $product)
-    {
-        //
-        $validated = $request->validate([
-            'name'  => 'required|max:100|min:2|unique:product,name,' . $product->id,
+    }*/
+
+    public function store(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'name'  => 'required|unique:product|max:100|min:2',
             'price' => 'required|numeric|gte:0|lte:100000',
         ]);
-        try {
-            $result = $product->update($request->all());
-            //$product->fill($request->all());
-            //$result = $product->save();
-            return redirect('product')->with(['message' => 'The product has been updated.']);
-        } catch(Exception $e) {
-            return back()->withInput()->withErrors(['message' => 'The product has not been updated.']);
+        if ($validator->passes()) {
+            $message = '';
+            $object = new Product($request->all());
+            try {
+                $result = $object->save();
+            } catch(\Exception $e) {
+                $result = false;
+                $message = $e->getMessage();
+            }
+        } else {
+            $result = false;
+            $message = $validator->getMessageBag();
         }
+        return response()->json(['result' => $result, 'message' => $message]);
     }
 
-    public function destroy(Product $product)
-    {
+    public function show($id) {
+        $product = Product::find($id);
+        $message = '';
+        if($product === null) {
+            $message = 'Product not found.';
+        }
+        return response()->json([
+            'message' => $message,
+            'product' => $product
+        ]);
+    }
+
+    /*public function edit(Product $product) {
         //
+    }*/
+
+    public function update(Request $request, $id) {
+        $message = '';
+        $product = Product::find($id);
+        $result = false;
+        if($product != null) {
+            $validator = Validator::make($request->all(), [
+                'name'  => 'required|max:100|min:2|unique:product,name,' . $product->id,
+                'price' => 'required|numeric|gte:0|lte:100000',
+            ]);
+            if($validator->passes()) {
+                try {
+                    $result = $product->update($request->all());
+                } catch(\Exception $e) {
+                    $message = $e->getMessage();
+                }
+            } else {
+                $message = $validator->getMessageBag();
+            }
+        } else {
+            $message = 'Product not found';
+        }
+        return response()->json(['result' => $result, 'message' => $message]);
+    }
+
+    public function destroy($id) {
+        //
+        $product = Product::find($id);
+        $message = '';
+        $result = false;
+        if($product != null) {
+            try {
+                $result = $product->delete();
+            } catch(\Exception $e) {
+                $message = $e->getMessage();
+            }
+        } else {
+            $message = 'Product not found';
+        }
+        return response()->json(['result' => $result, 'message' => $message]);
+        
+
     }
 }
+
