@@ -14,7 +14,7 @@ class ProductController extends Controller {
 
     public function index() {
         return response()->json([
-            'products' => Product::orderBy('id')->get()
+            'products' => Product::orderBy('id')->paginate(2)
         ]);
     }
 
@@ -85,19 +85,23 @@ class ProductController extends Controller {
 
     public function destroy($id) {
         //
-        $product = Product::find($id);
         $message = '';
+        $products = [];
+        $product = Product::find($id);
+      
         $result = false;
         if($product != null) {
             try {
                 $result = $product->delete();
+                $products = Product::orderBy('id')->get();
+                
             } catch(\Exception $e) {
                 $message = $e->getMessage();
             }
         } else {
             $message = 'Product not found';
         }
-        return response()->json(['result' => $result, 'message' => $message]);
+        return response()->json(['result' => $result, 'message' => $message, 'products' => $products]);
         
 
     }
